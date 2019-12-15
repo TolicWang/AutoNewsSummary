@@ -35,16 +35,17 @@ def strQ2B(ustring):
 
 
 class SogouNews:
-    def __init__(self, len_words=1, freq=10, top_words=20000, save_name='full_preprocess.pkl'):
+    def __init__(self, file_name='mini_sogou_news.dat', len_words=1, freq=10, top_words=20000):
         self.len_words = len_words
         self.top_words = top_words  # 如果freq == 0, 则以top_wrods为准
         self.freq = freq  # 过滤掉出现频率小于10的词
         # 如果freq 和top_words同时指定的话，以freq优先
-        self.save_name = save_name
+        self.save_name = file_name.split('.')[0] +'_'+str(len_words)+'_'+str(freq)+ '_preprocess.pkl'
         self.data_set_desc = ""
+        self.file_name = file_name
 
-    def load_raw_data(self, file_name='news_sohusite_xml.dat'):
-    # def load_raw_data(self, file_name='mini_sogou_news.dat'):
+    def load_raw_data(self, ):
+        # def load_raw_data(self, file_name='mini_sogou_news.dat'):
         """
         清洗数据
         :param file_path:
@@ -52,7 +53,7 @@ class SogouNews:
         titles[1]: 中国西部是地球上主要干旱带之一,妇女是当地劳动力...
         contents[1]: 同心县地处宁夏中部干旱带的核心区, 冬寒长,春暖迟,夏热短,秋凉早,干旱少雨,蒸发强烈,风大沙多。.....
         """
-        file_path = os.path.join(os.path.abspath(__file__)[:-25], 'SogouNews', file_name)
+        file_path = os.path.join(os.path.abspath(__file__)[:-25], 'SogouNews', self.file_name)
         print("载入原始数据……", file_path)
         f = open(file_path, 'r', encoding='gb18030')
         raw_data = f.read().split('</doc>')
@@ -156,6 +157,29 @@ class SogouNews:
                 raise ValueError("Padding Error")
         return res
 
+    def index_transform_to_data(self, sentences, idx_to_word):
+        vocabs = list(idx_to_word.keys())
+        results = []
+        for s in sentences:
+            tmp = []
+            for word in s:
+                tmp.append(vocabs[word])
+            results.append("".join(tmp))
+        return results
+
+    def random_sample(self, sources, targets, num_samples, idx_to_word):
+        import random
+        tmp = list(zip(sources, targets))
+        random.shuffle(tmp)
+        samples = tmp[:num_samples]
+        src, tgt = [], []
+        for item in samples:
+            t = [idx_to_word[idx] for idx in item[0]]
+            src.append("".join(t))
+            t = [idx_to_word[idx] for idx in item[1]]
+            tgt.append("".join(t))
+        return src, tgt
+
     def input_data(self):
         save_path = os.path.join(os.path.abspath(__file__)[:-25], 'SogouNews', self.save_name)
 
@@ -163,8 +187,8 @@ class SogouNews:
             f = open(save_path, 'rb')
             data = pickle.load(f)
             f.close()
-            source_input, target_input, target_output, word_to_idx, idx_to_word,desc = data['source_input'], data[
-                'target_input'], data['target_output'], data['word_to_idx'], data['idx_to_word'],data['desc']
+            source_input, target_input, target_output, word_to_idx, idx_to_word, desc = data['source_input'], data[
+                'target_input'], data['target_output'], data['word_to_idx'], data['idx_to_word'], data['desc']
             print("缓存载入成功！ {}".format(save_path))
             print(desc)
         else:
@@ -186,8 +210,10 @@ class SogouNews:
 
 
 if __name__ == '__main__':
-    sogou_news = SogouNews(len_words=2,freq=20)
+    # sogou_news = SogouNews(file_name='mini_sogou_news.dat', len_words=2, freq=20)
+    sogou_news = SogouNews(file_name='news_sohusite_xml.dat', len_words=1, freq=20)
     source_input, target_input, target_output, word_to_idx, idx_to_word = sogou_news.input_data()
     print(len(word_to_idx))
-    # print(word_to_idx)
-
+    a,b = sogou_news.random_sample(source_input, target_output, 2, idx_to_word)
+    print(a)
+    print(b)
