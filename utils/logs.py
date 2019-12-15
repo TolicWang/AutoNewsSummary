@@ -1,17 +1,23 @@
 import logging
-
+import os
+from datetime import datetime
 
 class Logger(object):
 
-    def __init__(self, log_file_name, log_level, logger_name):
+    def __init__(self, log_file_name, log_level, logger_name,log_dir = './logs/'):
         # 创建一个logger
         self.__logger = logging.getLogger(logger_name)
 
         # 指定日志的最低输出级别，默认为WARN级别
         self.__logger.setLevel(log_level)
 
+        # 指定路径
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
         # 创建一个handler用于写入日志文件
-        file_handler = logging.FileHandler(log_file_name)
+
+        file_handler = logging.FileHandler(log_dir+log_file_name+'_'+str(datetime.now())[:10]+'.txt')
+        #在日志名后追加日期
 
         # 创建一个handler用于输出控制台
         console_handler = logging.StreamHandler()
