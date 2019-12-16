@@ -1,6 +1,7 @@
 import tensorflow as tf
 import tensorflow.contrib as contrib
-from data.utils.load_sogou_news import special_tokens
+from utils.evaluation_utils import evaluate, save_result
+from data.utils.data_helper import padding
 from utils.logs import Logger
 import logging
 import os
@@ -71,8 +72,8 @@ class Seq2Seq():
                  learning_rate=1e-3,
                  batch_size=64,
                  epochs=100,
-                 model_path=None,
-                 log_dir='./log_train.txt'):
+                 model_path='MODEL',
+                 log_dir='log_train'):
         """
         :param rnn_size: # rnn 维度，即 num_units
         :param rnn_layer: # rnn 网络的层数
@@ -203,15 +204,18 @@ class Seq2Seq():
         crossent = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.decoder_output, logits=self.logits)
         self.train_loss = (tf.reduce_sum(crossent * target_weights) / self.batch_size)
 
-    def train(self, source_input, target_input, target_output, src_vocab_table, tgt_vocab_table, gen_batch):
+    def train(self, source_input, target_input, target_output, src_vocab_table, tgt_vocab_table, gen_batch,
+              random_samples, index_transform_to_data, idx_to_word):
+
         self.logger.info("### 开始训练网络……")
+        self.model_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'temp', self.model_path)
         if not os.path.exists(self.model_path):
             os.makedirs(self.model_path)
         params = tf.trainable_variables()
 
         gradients = tf.gradients(self.train_loss, params)
         clipped_gradients, _ = tf.clip_by_global_norm(gradients, 2)
-        optimizer = tf.train.AdadeltaOptimizer(self.learning_rate)
+        optimizer = tf.train.AdamOptimizer(self.learning_rate)
         update_step = optimizer.apply_gradients(zip(clipped_gradients, params))
         saver = tf.train.Saver(params, max_to_keep=5)
         model_name = 'train'
@@ -242,20 +246,24 @@ class Seq2Seq():
                                      self.target_output: batch[2],
                                      self.source_lengths: batch[3],
                                      self.target_lengths: batch[4]}
-                        # if step >= 9038:
-                        #     self.logger.info(
-                        #         "{}--sources :{}\ntarget_in:{}\n,target_out:{}".format(step, batch[0], batch[1],
-                        #                                                                batch[2]))
                         loss, _ = sess.run([self.train_loss, update_step], feed_dict=feed_dict)
-
                         total_loss += loss
-
                         if step % 50 == 0:
                             self.logger.info(
                                 "# Epoch:[{}/{}]-batch:[{}/{}]-Loss:{:.2f}-last epoch ave loss:{:.2f} max src len:{}".format(
                                     epoch, self.epochs, step, n_chunk,
                                     loss, ave_loss, max(batch[3])))
-                    if epoch % 5 == 0:
+                        if step % 500 == 0:
+                            nums = 10
+                            feed_dict = {self.source_input: batch[0][:nums],
+                                         self.target_input: batch[1][:nums],
+                                         self.target_output: batch[2][:nums],
+                                         self.source_lengths: batch[3][:nums],
+                                         self.target_lengths: batch[4][:nums]}
+                            pred = sess.run([self.pred], feed_dict=feed_dict)
+                            self.evaluate_bleu(pred[0], idx_to_word, batch[2])
+
+                    if epoch % 3 == 0:
                         self.logger.info("### 模型保持成功 {}...".format(model_name + '-' + str(epoch)))
                         saver.save(sess, os.path.join(self.model_path, model_name),
                                    global_step=epoch, write_meta_graph=False)
@@ -264,6 +272,23 @@ class Seq2Seq():
                 saver.save(sess, os.path.join(self.model_path, model_name), global_step=epoch - 1,
                            write_meta_graph=False)
 
+    def evaluate_bleu(self, outputs,idx_to_word,targets):
 
+        ref, out = [], []
+        samples = zip(outputs,targets)
+        for item in samples:
+            t = [idx_to_word[idx] for idx in item[0]]
+            out.append(" ".join(t))
+            t = [idx_to_word[idx] for idx in item[1]]
+            ref.append(" ".join(t))
+        save_result(ref,'reference')
+        save_result(out,'output')
+
+        output = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'temp', 'result', 'output')
+        reference = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'temp', 'result', 'reference')
+        bpe_bleu_score = evaluate(reference, output, "bleu")
+        for item in zip(ref, out):
+            self.logger.info("\n标签值：{}\n预测值：{}".format(item[0], item[1]))
+        self.logger.info("bleu:{}".format(bpe_bleu_score))
 if __name__ == '__main__':
     model = Seq2Seq()
