@@ -1,7 +1,7 @@
 import tensorflow as tf
 import tensorflow.contrib as contrib
 from utils.evaluation_utils import evaluate, save_result
-from data.utils.data_helper import padding
+from data.utils.load_sogou_news import special_tokens
 from utils.logs import Logger
 import logging
 import os
@@ -205,7 +205,7 @@ class Seq2Seq():
         self.train_loss = (tf.reduce_sum(crossent * target_weights) / self.batch_size)
 
     def train(self, source_input, target_input, target_output, src_vocab_table, tgt_vocab_table, gen_batch,
-              random_samples, index_transform_to_data, idx_to_word):
+              idx_to_word):
 
         self.logger.info("### 开始训练网络……")
         self.model_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'temp', self.model_path)
@@ -272,17 +272,28 @@ class Seq2Seq():
                 saver.save(sess, os.path.join(self.model_path, model_name), global_step=epoch - 1,
                            write_meta_graph=False)
 
-    def evaluate_bleu(self, outputs,idx_to_word,targets):
+    def evaluate_bleu(self, outputs, idx_to_word, targets):
 
         ref, out = [], []
-        samples = zip(outputs,targets)
+        samples = zip(outputs, targets)
         for item in samples:
-            t = [idx_to_word[idx] for idx in item[0]]
+            t = []
+            for idx in item[0]:
+                word = idx_to_word[idx]
+                if word == special_tokens[0] or word == special_tokens[2] or word == special_tokens[3]:
+                    break
+                t.append(word)
             out.append(" ".join(t))
-            t = [idx_to_word[idx] for idx in item[1]]
+
+            t = []
+            for idx in item[1]:
+                word = idx_to_word[idx]
+                if word == special_tokens[2]:
+                    break
+                t.append(word)
             ref.append(" ".join(t))
-        save_result(ref,'reference')
-        save_result(out,'output')
+        save_result(ref, 'reference')
+        save_result(out, 'output')
 
         output = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'temp', 'result', 'output')
         reference = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'temp', 'result', 'reference')
@@ -290,5 +301,21 @@ class Seq2Seq():
         for item in zip(ref, out):
             self.logger.info("\n标签值：{}\n预测值：{}".format(item[0], item[1]))
         self.logger.info("bleu:{}".format(bpe_bleu_score))
+
+    def infer(self, sources, source_length):
+        self.logger.info("### 推断……")
+        self.model_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'temp', self.model_path)
+        check_point = tf.train.latest_checkpoint(self.model_path)
+        saver = tf.train.Saver()
+        with tf.Session() as sess:
+            if not check_point:
+                raise ValueError("模型不存在，请重新训练……（python train）")
+            saver.restore(sess, check_point)
+            feed_dict = {self.source_input: sources,
+                         self.source_lengths: source_length}
+            results = sess.run([self.pred], feed_dict=feed_dict)
+        return results
+
+
 if __name__ == '__main__':
     model = Seq2Seq()
