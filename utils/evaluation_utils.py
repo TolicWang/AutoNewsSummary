@@ -32,12 +32,14 @@ from .rouge import rouge
 
 
 def save_result(contents, file_name='ref'):
+
     file_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'temp', 'result')
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
     file_name = os.path.join(file_dir, file_name)
     f = open(file_name, 'w', encoding='utf-8')
     for item in contents:
+        item = item.replace('<UNK>', '').replace('<PAD>', '').replace('<EOS>','').strip()
         f.write(item + '\n')
     f.close()
 
@@ -103,7 +105,7 @@ def _bleu(ref_file, trans_file, subword_option=None):
         for line in fh:
             line = _clean(line, subword_option=None)
             translations.append(line.split(" "))
-
+    print(translations)
     # bleu_score, precisions, bp, ratio, translation_length, reference_length
     bleu_score, _, _, _, _, _ = compute_bleu(
         per_segment_references, translations, max_order, smooth)
