@@ -40,7 +40,7 @@ class SogouNews:
         self.top_words = top_words  # 如果freq == 0, 则以top_wrods为准
         self.freq = freq  # 过滤掉出现频率小于10的词
         # 如果freq 和top_words同时指定的话，以freq优先
-        self.save_name = file_name.split('.')[0] +'_'+str(len_words)+'_'+str(freq)+ '_preprocess.pkl'
+        self.save_name = file_name.split('.')[0] + '_' + str(len_words) + '_' + str(freq) + '_preprocess.pkl'
         self.data_set_desc = ""
         self.file_name = file_name
 
@@ -59,7 +59,6 @@ class SogouNews:
         raw_data = f.read().split('</doc>')
         f.close()
         titles, contents = [], []
-
         for line in tqdm(raw_data[:-1]):
             line = line.strip('\n')
             line = line.split('\n')
@@ -69,7 +68,6 @@ class SogouNews:
                 continue
             titles.append(title)
             contents.append(content)
-
         self.data_set_desc += "1.样本总数为:{}\n".format(len(contents))
 
         # for item in zip(titles, contents):
@@ -77,6 +75,30 @@ class SogouNews:
         #     print(item[1])
         #     print('--------')
         return titles, contents
+
+    def load_inference_data(self, word_to_idx):
+        file_path = os.path.join(os.path.abspath(__file__)[:-25], 'SogouNews', 'inference_data.txt')
+        print("载入预测数据成功！", file_path, '\n')
+        f = open(file_path, 'r', encoding='utf-8')
+        raw_data = f.readlines()
+        f.close()
+        titles, contents = [], []
+        line_num = 0
+        while line_num < len(raw_data):
+            title = raw_data[line_num].strip('\n')[14:-15]
+            titles.append(strQ2B(title))
+            content = raw_data[line_num + 1].strip('\n')[9:-10]
+            contents.append(strQ2B(content).replace('\ue40c', ' '))
+            line_num += 2
+        cut_contents = []
+
+        for item in contents:
+            seg = jieba.cut(item, cut_all=False)
+            seg = " ".join(seg)
+            cut_contents.append(seg.split())
+        x = self.data_transform_to_index(word_to_idx, cut_contents)
+
+        return x,titles,contents
 
     def get_vocab_and_dict(self, ):
         """
@@ -138,6 +160,13 @@ class SogouNews:
         return x, y, word_to_idx, idx_to_word
 
     def data_transform_to_index(self, word_to_idx, sentence, marks=None):
+        """
+
+        :param word_to_idx:
+        :param sentence: [['南', '都', '讯', '记者', '刘凡', '周昌', '和', '任笑', '一',...],[...],]
+        :param marks:
+        :return: [[0, 26, 0, 44, 0, 0, 12, 0, 157, 0],[ 0, 0, 63, 4, 0, 0, 18, 0, 97, 0, 0, 0, 4]]
+        """
         res = []
         for s in tqdm(sentence):
             tmp = []
@@ -158,12 +187,14 @@ class SogouNews:
         return res
 
     def index_transform_to_data(self, sentences, idx_to_word):
-        vocabs = list(idx_to_word.keys())
         results = []
         for s in sentences:
             tmp = []
             for word in s:
-                tmp.append(vocabs[word])
+                word = idx_to_word[word]
+                if word == EOS:
+                    break
+                tmp.append(word)
             results.append("".join(tmp))
         return results
 
@@ -210,10 +241,7 @@ class SogouNews:
 
 
 if __name__ == '__main__':
-    # sogou_news = SogouNews(file_name='mini_sogou_news.dat', len_words=2, freq=20)
-    sogou_news = SogouNews(file_name='news_sohusite_xml.dat', len_words=1, freq=20)
+    sogou_news = SogouNews(file_name='mini_sogou_news.dat', len_words=1, freq=20)
+    # sogou_news = SogouNews(file_name='news_sohusite_xml.dat', len_words=1, freq=20)
     source_input, target_input, target_output, word_to_idx, idx_to_word = sogou_news.input_data()
-    print(len(word_to_idx))
-    a,b = sogou_news.random_sample(source_input, target_output, 2, idx_to_word)
-    print(a)
-    print(b)
+    sogou_news.load_inference_data(word_to_idx)
