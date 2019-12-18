@@ -91,14 +91,18 @@ class SogouNews:
             contents.append(strQ2B(content).replace('\ue40c', ' '))
             line_num += 2
         cut_contents = []
+        cut_titles = []
+        for item in zip(titles, contents):
+            seg = jieba.cut(item[0], cut_all=False)
+            seg = " ".join(seg)
+            cut_titles.append(" ".join(seg.split()))
 
-        for item in contents:
-            seg = jieba.cut(item, cut_all=False)
+            seg = jieba.cut(item[1], cut_all=False)
             seg = " ".join(seg)
             cut_contents.append(seg.split())
         x = self.data_transform_to_index(word_to_idx, cut_contents)
 
-        return x,titles,contents
+        return x, titles, cut_titles, contents
 
     def get_vocab_and_dict(self, ):
         """
@@ -188,6 +192,7 @@ class SogouNews:
 
     def index_transform_to_data(self, sentences, idx_to_word):
         results = []
+        cut_results = []
         for s in sentences:
             tmp = []
             for word in s:
@@ -196,7 +201,8 @@ class SogouNews:
                     break
                 tmp.append(word)
             results.append("".join(tmp))
-        return results
+            cut_results.append(" ".join(tmp))
+        return results,cut_results
 
     def random_sample(self, sources, targets, num_samples, idx_to_word):
         import random
@@ -244,4 +250,5 @@ if __name__ == '__main__':
     sogou_news = SogouNews(file_name='mini_sogou_news.dat', len_words=1, freq=20)
     # sogou_news = SogouNews(file_name='news_sohusite_xml.dat', len_words=1, freq=20)
     source_input, target_input, target_output, word_to_idx, idx_to_word = sogou_news.input_data()
-    sogou_news.load_inference_data(word_to_idx)
+    x, titles, cut_titles, contents = sogou_news.load_inference_data(word_to_idx)
+    print(cut_titles)
