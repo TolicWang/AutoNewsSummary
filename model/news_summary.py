@@ -171,7 +171,7 @@ class Seq2Seq():
             attention_mechanism = contrib.seq2seq.LuongAttention(num_units=self.rnn_size,
                                                                  memory=attention_states,
                                                                  memory_sequence_length=self.source_lengths)
-            decoder_cell = contrib.seq2seq.AttentionWrapper(decoder_cell, attention_states,
+            decoder_cell = contrib.seq2seq.AttentionWrapper(decoder_cell, attention_mechanism,
                                                             attention_layer_size=self.rnn_size)
             decoder_init_state = decoder_cell.zero_state(self.batch_size, dtype=tf.float32).clone(
                 cell_state=self.encoder_final_state)
