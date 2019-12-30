@@ -254,12 +254,12 @@ class Seq2Seq():
                                     epoch, self.epochs, step, n_chunk,
                                     loss, ave_loss, max(batch[3])))
                         if step % 500 == 0:
-                            nums = 10
-                            feed_dict = {self.source_input: batch[0][:nums],
-                                         self.target_input: batch[1][:nums],
-                                         self.target_output: batch[2][:nums],
-                                         self.source_lengths: batch[3][:nums],
-                                         self.target_lengths: batch[4][:nums]}
+
+                            feed_dict = {self.source_input: batch[0],
+                                         self.target_input: batch[1],
+                                         self.target_output: batch[2],
+                                         self.source_lengths: batch[3],
+                                         self.target_lengths: batch[4]}
                             pred = sess.run([self.pred], feed_dict=feed_dict)
                             self.evaluate_bleu(pred[0], idx_to_word, batch[2])
 

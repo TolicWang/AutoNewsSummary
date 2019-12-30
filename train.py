@@ -7,11 +7,11 @@ if __name__ == '__main__':
     freq = 20
     rnn_size = 128
     rnn_layer = 2
-    truncate_times = 15
     share_vocab = True
     src_embed_size = 128
     tgt_embed_size = 128
-    use_attention = False
+    use_attention = True
+    truncate_times = 15
     batch_size = 128
 
     sogou_news = SogouNews(file_name='news_sohusite_xml.dat', len_words=len_words, freq=freq)
@@ -25,6 +25,7 @@ if __name__ == '__main__':
                     src_embed_size=src_embed_size,
                     tgt_embed_size=tgt_embed_size,
                     model_path='MODEL',
+                    use_attention=use_attention,
                     batch_size=batch_size
                     )
     model.train(source_input, target_input, target_output, word_to_idx, word_to_idx, gen_batch, idx_to_word)
