@@ -6,6 +6,10 @@
 
 ## 更新记录
 
+**2019-12-30**
+
+- 修复attention参数设置bug；
+
 **2019-12-18**
 
 - 完成了整个框架的搭建和调试工作；
@@ -15,15 +19,17 @@
 
 - **1.安装**
   
-    安装好`tensorflow-gpu 1.5.0`版本，下载好数据集解压后放到`data/SogouNews/`目录下即可（也提供训练好的模型，放入项目根目录下）；
+    安装好`tensorflow-gpu 1.5.0`版本，下载好数据集解压后放到`data/SogouNews/`目录下即可；
     
 - **2.训练**
 
     下载完成数据后，在`train.py`文件中设置好相关参数，运行 `python train.py`即可开始训练；
 
+    注：也可直接将训练好的模型，放入项目`temp/MODEL/`目录下，进行追加训练；
+
 - **3.预测**
 
-  按照`data/SogouNews/inference_data.txt`的格式，将里面的内容替换成对应的新闻文本即可，`contenttitle`部分保持不变或者任意内容即可；
+  按照`data/SogouNews/inference_data.txt`的格式，将里面的内容替换成对应的新闻文本即可，`contenttitle`标签部分保持不变或者任意内容即可；
 
 ## 使用示例
 
